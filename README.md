@@ -1,7 +1,7 @@
 # server-pulse
 Outil de monitoring serveur gratuit, fonctionnant sous Windows (PowerShell + interface web), ultra-léger et déployable en une minute.
 
-![Monitoring serveur](https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEgFvo_AIZ0yN4EuUL4efIWRbvcdp2OgPF4lWwiYSypWWcpb9UkC4nNgj8b6nkAlQFWgBMy77R3IYVejeYAzipyhOWtIZ4y9_IAHKif3CeE-Hc5JdLsjfKIJXiQAwe0wd4nCbGZ4OkGCqj8dt0vnCE88mYjC2yZZB41xLNrzWLbuLqftQAItjcq7xNQKu33L/w640-h276/screen-shot.png)
+![Monitoring serveur](https://raw.githubusercontent.com/simple-group/server-pulse/refs/heads/main/screen-shot.png)
 
 ============
           SERVER PULSE - MONITORING DASHBOARD V1.5
