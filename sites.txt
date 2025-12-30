@@ -1,0 +1,3 @@
+google.com,AD,noweb
+crm-pour-pme.fr,CRM
+simple-crm-support.com,CRM,noping
