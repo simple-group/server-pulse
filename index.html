@@ -20,7 +20,6 @@
 
         body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text-main); margin: 0; padding: 15px; }
 
-        /* Header avec statistiques et cycle */
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
         .header h1 { font-size: 1.5rem; margin: 0; color: var(--primary); display: flex; align-items: center; gap: 10px; }
         
@@ -30,7 +29,6 @@
         .badge-ok { background: #dcfce7; color: #15803d; }
         .badge-ko { background: #fee2e2; color: #b91c1c; }
 
-        /* Grille haute densité */
         .grid { 
             display: grid; 
             grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); 
@@ -56,6 +54,9 @@
         .fav-btn { cursor: pointer; background: none; border: none; font-size: 1.2rem; color: #cbd5e1; padding: 0; }
         .fav-btn.active { color: #f59e0b; }
 
+        .mute-btn { cursor: pointer; background: none; border: none; font-size: 1rem; filter: grayscale(1); padding: 0; }
+        .mute-btn.active { filter: grayscale(0); }
+
         .status-line { display: flex; justify-content: space-between; font-size: 0.75rem; margin-top: 4px; color: var(--text-muted); }
         .status-val { font-weight: 700; }
         .text-ok { color: var(--success); }
@@ -63,14 +64,25 @@
         .text-na { color: var(--text-muted); }
 
         .section-title { font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; margin: 20px 0 10px; letter-spacing: 0.5px; }
-
         .chart-section { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); height: 250px; }
         
         footer { text-align: center; margin-top: 30px; font-size: 0.85rem; color: var(--text-muted); padding-bottom: 20px; }
         footer a { color: var(--primary); text-decoration: none; font-weight: 600; }
+
+        /* Notification pour activer le son */
+        #audio-prompt {
+            background: #4338ca; color: white; padding: 10px; text-align: center;
+            border-radius: 8px; margin-bottom: 15px; cursor: pointer; display: none;
+        }
     </style>
 </head>
-<body>
+<body onclick="enableAudio()">
+
+    <audio id="alert-sound" preload="auto">
+        <source src="alert.ogg" type="audio/ogg">
+    </audio>
+
+    <div id="audio-prompt">🔊 Cliquez ici pour activer les alertes sonores</div>
 
     <div class="header">
         <h1>Server Pulse <span id="cycle-display" class="badge badge-cycle">Cycle --</span></h1>
@@ -98,6 +110,19 @@
 
     <script>
         const favs = JSON.parse(localStorage.getItem('monitorFavs') || '[]');
+        const muted = JSON.parse(localStorage.getItem('monitorMuted') || '[]');
+        let audioEnabled = false;
+
+        function enableAudio() {
+            if (!audioEnabled) {
+                const audio = document.getElementById('alert-sound');
+                audio.play().then(() => {
+                    audio.pause();
+                    audioEnabled = true;
+                    document.getElementById('audio-prompt').style.display = 'none';
+                }).catch(e => console.log("Attente interaction..."));
+            }
+        }
 
         function toggleFav(name) {
             const index = favs.indexOf(name);
@@ -107,11 +132,18 @@
             location.reload();
         }
 
+        function toggleMute(name) {
+            const index = muted.indexOf(name);
+            if(index > -1) muted.splice(index, 1);
+            else muted.push(name);
+            localStorage.setItem('monitorMuted', JSON.stringify(muted));
+            location.reload();
+        }
+
         if (typeof serverData !== 'undefined') {
             document.getElementById('last-update').innerText = lastUpdate;
             document.getElementById('cycle-display').innerText = "Cycle " + cycleCount;
             
-            // Mise à jour des compteurs OK/KO
             const totalOk = serverData.filter(s => s.class === 'online').length;
             const totalKo = serverData.length - totalOk;
             document.getElementById('stat-ok').innerText = "OK: " + totalOk;
@@ -121,97 +153,70 @@
             const gridFav = document.getElementById('grid-fav');
             const favSection = document.getElementById('fav-section');
 
+            let alertShouldPlay = false;
+
             serverData.forEach(site => {
                 const isFav = favs.includes(site.name);
+                const isMuted = muted.includes(site.name);
                 const siteUrl = site.name.startsWith('http') ? site.name : 'http://' + site.name;
                 const getPillClass = (val) => val === 'OK' ? 'text-ok' : (val === 'N/A' ? 'text-na' : 'text-ko');
+
+                // Correction logic : ça doit sonner si c'est warning (terme absent) OU offline, et pas muté
+                if((site.class === 'offline' || site.class === 'warning') && !isMuted) {
+                    alertShouldPlay = true;
+                }
 
                 const cardHtml = `
                     <div class="card ${site.class}">
                         <div class="card-header">
                             <span class="card-name" title="${site.name}">${site.name}</span>
                             <div class="actions">
-                                <a href="${siteUrl}" target="_blank" class="action-link" title="Ouvrir le site">🔗</a>
+                                <a href="${siteUrl}" target="_blank" class="action-link">🔗</a>
+                                <button class="mute-btn ${isMuted ? 'active' : ''}" onclick="toggleMute('${site.name}')">
+                                    ${isMuted ? '🔇' : '🔊'}
+                                </button>
                                 <button class="fav-btn ${isFav ? 'active' : ''}" onclick="toggleFav('${site.name}')">★</button>
                             </div>
                         </div>
-                        <div class="status-line">
-                            <span>PING</span>
-                            <span class="status-val ${getPillClass(site.ping)}">${site.ping}</span>
-                        </div>
-                        <div class="status-line">
-                            <span>WEB</span>
-                            <span class="status-val ${getPillClass(site.web)}">${site.web}</span>
-                        </div>
+                        <div class="status-line"><span>PING</span><span class="status-val ${getPillClass(site.ping)}">${site.ping}</span></div>
+                        <div class="status-line"><span>WEB</span><span class="status-val ${getPillClass(site.web)}">${site.web}</span></div>
                     </div>
                 `;
 
-                if(isFav) {
-                    favSection.style.display = 'block';
-                    gridFav.innerHTML += cardHtml;
-                } else {
-                    gridAll.innerHTML += cardHtml;
-                }
+                if(isFav) { favSection.style.display = 'block'; gridFav.innerHTML += cardHtml; }
+                else { gridAll.innerHTML += cardHtml; }
             });
 
-            // Configuration optimisée du graphique Chart.js
+            if(alertShouldPlay) {
+                const audio = document.getElementById('alert-sound');
+                const playPromise = audio.play();
+                if (playPromise !== undefined) {
+                    playPromise.catch(() => {
+                        document.getElementById('audio-prompt').style.display = 'block';
+                    });
+                }
+            }
+
             const ctx = document.getElementById('healthChart').getContext('2d');
             new Chart(ctx, {
                 type: 'line',
                 data: {
                     labels: historyPing.map((_, i) => "Cycle " + (i + 1)),
                     datasets: [{
-                        label: 'Disponibilité Réseau (Ping)',
-                        data: historyPing,
-                        borderColor: '#6366f1',
-                        backgroundColor: 'rgba(99, 102, 241, 0.1)',
-                        fill: true,
-                        tension: 0.4,
-                        borderWidth: 2,
-                        pointRadius: 3
+                        label: 'Ping', data: historyPing, borderColor: '#6366f1', fill: true, tension: 0.4
                     }, {
-                        label: 'Disponibilité Service (Web)',
-                        data: historyWeb,
-                        borderColor: '#22c55e',
-                        backgroundColor: 'transparent',
-                        borderDash: [5, 5],
-                        tension: 0.4,
-                        borderWidth: 2,
-                        pointRadius: 3
+                        label: 'Web', data: historyWeb, borderColor: '#22c55e', borderDash: [5, 5], tension: 0.4
                     }]
                 },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            display: true,
-                            position: 'top',
-                            labels: { boxWidth: 20, font: { size: 12 } }
-                        }
-                    },
-                    scales: {
-                        y: { 
-                            min: 0, 
-                            max: totalServers, 
-                            ticks: { stepSize: 1, color: '#94a3b8' }, 
-                            grid: { color: '#f1f5f9' } 
-                        },
-                        x: { 
-                            grid: { display: false },
-                            ticks: { color: '#94a3b8', font: { size: 10 } }
-                        }
-                    }
-                }
+                options: { responsive: true, maintainAspectRatio: false }
             });
         }
     </script>
 
     <footer>
-        <p>[ Mini logiciel proposé par <a href="https://simple-crm.ai" target="_blank">SIMPLE CRM</a> 
-        et codé par <a href="https://www.ihaveto.be" target="_blank">Brice Cornet</a> | 
-        <a href="https://crm-pour-pme.fr/open-source/monitoring.zip" target="_blank">Code open source</a> ]</p>
+        <p>[ Logiciel proposé par <a href="https://simple-crm.ai" target="_blank">SIMPLE CRM</a> 
+        - Codé par <a href="https://www.ihaveto.be" target="_blank">Brice Cornet</a> - Dispo sur 
+<a href="https://github.com/simple-group/server-pulse" target="_blank">GITHUB</a> ]</p>
     </footer>
-    
 </body>
 </html>
