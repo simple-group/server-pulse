@@ -41,6 +41,7 @@ Scénarios de configuration :
 3. FONCTIONNALITÉS DE L'INTERFACE
 ---
 * FAVORIS (★) : Épingle les serveurs critiques en haut de page.
+* MUTE (🔊) : Stop l'alerte sonore. 
 * LIEN DIRECT (🔗) : Ouvre l'URL du serveur dans un nouvel onglet.
 * GRAPHIQUE DE TENDANCE : Affiche l'historique de disponibilité du parc. 
   La légende permet de distinguer la santé Réseau (Ping) de la santé 
@@ -115,6 +116,7 @@ is down or the keyword was not found.
 ---
 
 * FAVORITES (★): Pins critical servers to the top of the page.
+* MUTE (🔊) : Mutes the sound alert. 
 * DIRECT LINK (🔗): Opens the server URL in a new tab.
 * TREND GRAPH: Displays the uptime history of your infrastructure.
 The legend distinguishes between Network health (Ping) and
